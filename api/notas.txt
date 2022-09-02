@@ -1,0 +1,7 @@
+---------------------THIS IS A LOG FOR MY FUTURE SELF-----
+
+TODO: DOCUMENTAR TODO
+
+Okay esto es una api así que como en toda api recibimos peticiones del cliente, hacemos cosas y pasamos resultados al cliente, en este caso es todo operar con la base de datos, luego el cliente se apañará para pintar el resultado. Tenemos varios modelos y carpetas, en la carpeta models hay un js por cada modelo de la base de datos, el de usuario tiene su nombre, email, contraseña y foto, con esto luego podemos coger esa foto para ponerla en el topbar del cliente.
+
+El de post tiene titulo, descripcion, que es el texto de dentro, foto de cabecera, usuario que lo creó y categorías, las categorías solo tienen un nombre
