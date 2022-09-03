@@ -13,7 +13,7 @@
   "description": "api to my blog",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "nodemon index.js --ignore client"
   },
   "author": "jesus marmol",
   "license": "ISC"
