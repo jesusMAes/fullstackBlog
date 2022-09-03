@@ -5,3 +5,41 @@ TODO: DOCUMENTAR TODO
 Okay esto es una api así que como en toda api recibimos peticiones del cliente, hacemos cosas y pasamos resultados al cliente, en este caso es todo operar con la base de datos, luego el cliente se apañará para pintar el resultado. Tenemos varios modelos y carpetas, en la carpeta models hay un js por cada modelo de la base de datos, el de usuario tiene su nombre, email, contraseña y foto, con esto luego podemos coger esa foto para ponerla en el topbar del cliente.
 
 El de post tiene titulo, descripcion, que es el texto de dentro, foto de cabecera, usuario que lo creó y categorías, las categorías solo tienen un nombre
+
+INDEX.JS es la puerta de entrada, de hecho en el package json en la zona de scripts hay uno llamado start que contiene nodemon indexjs así cuando tu o donde lo subas inicie ejecutará start, que a su vez hace el nodemon 
+
+Index es una app de express que usa mongoose para conectar a la base de datos con mongoose.connect y la url, dotenv para leer los archivos secretos, bodyparser para leer el body de las peticiones y luego tiene el app.listen para escuchar el puerto
+
+esta app no usa rutas normales, en su lugar usa routers que son middlewares que interceptan la llamada y lo ejecutan, así cuando se llama a /api/auth se pasa al router authRoute y en cada router ponemos que hace con cada ruta, las rutas de estos routers son relativas, es decir / equivale a /api/auth.  /register sería api/auth/register y así, de esta manera podemos gestionar más comodamente las rutas, y en la principal solo lo importamos y le decimos a que ruta equivale cada router 
+
+Pasamos a la carpeta routes, aquí tenemos varios archivos, cada uno un router en el que definimos que pasa cuando visitamos las rutas relativas a ese parte de la url, de momento tenemos rutas para autenticación, categorías, post y users
+
+en auth importamos el modelo de user porque aquí es donde lo insertaremos en la base de datos, también router, de express porque estamos creando un router y bcrypt porque no podemos mandar las contraseñas en texto legible hay que encriptarlas
+
+La primera ruta corresponde a register, se llama con el formulario de la pagina register y comienza con un trycath por si algo falla, crea una sal, tuve que googlearlo esto, la cosa es que bcrypt encripta siempre igual entonces una cadena digamos : hola siempre va a tener la misma codificación y por tanto aunque sería más difícil si alguien accede a la base de datos podría descifrar esas cadenas, para evitar eso se usa la sal, es una cadena aleatoria que bcrypt genera y que luego se une a tu contraseña entonces tu contraseña ya tiene un factor de aleatoriedad en el encriptado que hace más difícil hackearla, aun así bcrypt puede descifrarla porque la salt va dentro de la contraseña y como conoce los algoritmos puede darle la vuelta
+
+Todo esto son cosas asincronas, por eso llevan el await, una vez nos dan la salt usamos hash pasandole la contraseña que viene en el cuerpo de la petición y la salt y se genera una contraseña segura, usamos el modelo User para crear uno nuevo con los datos del formulario pero con la contraseña hasheadaa, luego usamos await y el metodo save para guardarlo en la base de datos, asignamos esto a una variable y lo mandamos en el response por si el frontend quiere hacer algo con él
+
+la otra ruta de aquí es login, también va con try catch, primero usamos el email que nos mandan para encontrar al usuario en la base de datos usando findOne, lo asignamos a una variable si no nos devuelve ningún usuario usamos un condicional para mandar la respuesta y salid, si sí pasamos a validad que la contraseña coincida, esto se hace con bcrypt compare, le pasamos la contraseña que va en el body de la petición y la que va en el usuario de la bbdd y bcrypt encripta y tal y compara, si no coinciden lo sacamos también en caso de que sí usamos esta linea rara:  const {password, ...others} = user._doc 
+
+Lo que hace es coger el password por un lado y el resto de propiedades por otro, y lo coge de la propiedad _doc del user, esto es asi porque mongo no nos devuelve solo el usuario nos devuelve un objeto enorme con muchísima info que se genera automáticamente y la info que metimos nosotros va en _doc, luego en el res pasamos el others, así no le enviamos la contraseña de vuelta y no pueden leerla
+
+MODULO User
+Este modulo corresponde a la pantalla setting donde podemos editar nuestros datos y borrar el usuario. Como el del tutorial no usa tokens es un poco más inseguro, la url recibeun id, y en la petición va la id de ese usuario así que primero lo comparamos para asegurarnos de que coinciden, de esta manera el usuario con id 4 no puede editar datos del que tiene id 5 luego ya viene procesar la info del formulario, si ha cambiado la contraseña la cogemos, generamos una salt y la encriptamos con hash y la salt, luego usamos findByIdAndUpdate dentro de un try para encontrar el usuario con ese id y actualizar sus datos con la info que viene en el body, usa una nomenclatura rara: $set: req.body, creo que es una forma automatizada para poner directamente toda la info del body en los campos que correspondan, luego ya manda la respuesta o si falla el error
+
+la ruta delete es un calco de la anterior , destaca que tras comprobar el id usa un try aparte para buscar el user con ese id y si no existe lanzar error, si existe entra a otro try que usa findByIdAndDelete para borrarlo y luego ya mandar la respuesta
+Algo que hace y que yo no porque no me gusta es borrar los post de ese usuario, hacerlo es tan fácil como usar el model de la base de datos, decir Post.deleteMany() y como parametro decirle que borre aquellos cuyo username coincida con el del usuario que estás borrando
+
+get no tiene misterio, usa el id que va por params y lo busca con find id
+
+en post nada nuevo, tenemos un post que directamente manda a la base de datos todo el req.body, un put que actualiza, buscando con findByIdAndUpdate y mete todo el body un delete que tan solo es findByIdAndDelete y un getALL que es mas gracioso porque usa querys para coger todos los post de un usuario o una categoría y si esos querys están vacíos directamente recupera todos los post y los envía
+
+en categories igual un post para crear una nueva y un get para recuperarlas
+
+ENVIAR IMAGENES: esto es interesante porque dentro de post enviamos una imagen de cabecera y no la podemos procesar por las buenas, para esto tenemos que usar multer, una librería para subir archivos
+
+lo que hace es crear un almacen para esos archivos, ese almacen es nuestra carpeta images 
+
+usando multer le dice: storage = multer.diskstorage y luego viene un objeto con parametros, entre ellos destination que dice donde están las imagenes, usa una función callback por si falla algo 
+
+Lo que hace multer es interceptar las peticiones con archivo, coger la imagen, guardarla en nuestra carpeta images y ponerle el nombre que llevase el archivo, entiendo que así luego podemos ir a esa carpeta para cargar la imagen en el post

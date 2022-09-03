@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const User = require('../models/User');
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
+const { Router } = require("express");
 
 //UPDATE
 router.put("/:id", async (req, res) =>{
@@ -47,6 +48,18 @@ router.delete("/:id", async (req, res) =>{
   }
   });
 
+//GET USER
+router.get("/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    const {password, ...others} = user._doc;
+
+    res.status(200).json(others)
+    
+  } catch (err) {
+    res.status(500).json(err)
+  }
+})
 
 
 
